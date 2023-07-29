@@ -51,7 +51,6 @@ const Navbar = () => {
 
     if (obj !== undefined) {
         const retrievedObj = JSON.parse(obj);
-        console.log(retrievedObj.accountId)
         accountID = retrievedObj.accountId;
     }
 
