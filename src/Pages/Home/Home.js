@@ -19,7 +19,7 @@ import {
 import { MdSend } from 'react-icons/md';
 import Navbar from '../../components/navbar/Navbar';
 import useNearStore from '../../store/near';
-import { CheckCircleIcon, ExternalLinkIcon } from '@chakra-ui/icons'
+import { CheckCircleIcon, CloseIcon, ExternalLinkIcon, } from '@chakra-ui/icons'
 import { toast } from 'react-hot-toast';
 
 const Home = () => {
@@ -36,7 +36,6 @@ const Home = () => {
     const { keyStores } = nearAPI;
     const myKeyStore = new keyStores.BrowserLocalStorageKeyStore();
 
-    console.log(nearState.send);
 
 
     const connectionConfig = {
@@ -50,34 +49,72 @@ const Home = () => {
 
     const interactWallet = async (action) => {
 
-        const nearConnection = await nearAPI.connect(connectionConfig);
+        try {
+            const nearConnection = await nearAPI.connect(connectionConfig);
+            const walletConnection = new nearAPI.WalletConnection(nearConnection);
+            if (action === "connect") {
 
-        const walletConnection = new nearAPI.WalletConnection(nearConnection);
-        console.log(walletConnection)
-        if (action === "connect") {
+                try {
+                    const account = await nearConnection.account(senderAccount);
+                    const accountState = await account.state();
+                    console.log(accountState);
+                }
+                catch (err) {
+                    console.log(err);
+                    toast.error('Wallet does not exist')
+                    return false;
+                }
 
-            walletConnection.requestSignIn({
-                contractId: senderAccount,
-                methodNames: [], // optional
-                successUrl: "http://localhost:3000/", // optional redirect URL on success
-                failureUrl: "http://localhost:3000/home/failure" // optional redirect URL on failure
-            });
+                console.log(walletConnection)
+                walletConnection.requestSignIn({
+                    contractId: senderAccount,
+                    methodNames: [], // optional
+                    successUrl: "https://near-transaction.vercel.app/", // optional redirect URL on success
+                    failureUrl: "https://near-transaction.vercel.app/" // optional redirect URL on failure
+                });
+
+
+
+
+            }
+
+            else if (action === "disconnect") {
+                walletConnection.signOut();
+                localStorage.clear()
+                window.location.reload();
+
+            }
         }
-
-        else if (action === "disconnect") {
-            walletConnection.signOut();
-            localStorage.clear()
-            window.location.reload();
+        catch (e) {
+            console.log(e)
         }
 
 
     }
-    let accountID;
-    const obj = myKeyStore?.localStorage?.undefined_wallet_auth_key;
 
-    if (obj !== undefined) {
-        const retrievedObj = JSON.parse(obj);
-        accountID = retrievedObj.accountId;
+
+    const localStorageObj = myKeyStore.localStorage;
+    const keys = Object.keys(localStorageObj);
+    const nearAccountKey = localStorageObj[keys[0]];
+
+    console.log(nearAccountKey)
+
+
+    let accountID;
+
+
+    if (nearAccountKey && nearAccountKey !== 'light') {
+        const url = window.location;
+        const urlObject = new URL(url);
+
+        // Get the search parameters from the URL object
+        const searchParams = urlObject.searchParams;
+
+        // Retrieve the value of the 'account_id' parameter
+        accountID = searchParams.get("account_id");
+
+        console.log(accountID, "Block Entered");
+
     }
 
 
@@ -273,8 +310,9 @@ const Home = () => {
             {nearState.send.success?.link ?
                 <Box textAlign="center" py={10} px={6}>
                     <CheckCircleIcon boxSize={'50px'} color={'green.500'} />
+
                     <Heading as="h2" size="xl" mt={6} mb={2}>
-                        NEAR Token sending successfull
+                        NEAR Token sending successful
                     </Heading>
                     <Text color={'gray.500'}>
                         OPEN LINK BELOW to see transaction in NEAR Explorer!'
@@ -286,6 +324,20 @@ const Home = () => {
                     </Text>
                 </Box>
                 : ""}
+            {nearState.send.failure?.error ?
+                <Box textAlign="center" py={10} px={6}>
+                    <CloseIcon boxSize={'50px'} color={'red.500'} />
+                    <Heading as="h2" size="xl" mt={6} mb={2}>
+                        NEAR Token sending unsuccessful
+                    </Heading>
+
+                    <Text color={'red.500'}>
+                        {nearState.send.failure?.error.message}
+                    </Text>
+
+                </Box>
+                : ""}
+
 
         </>
     );

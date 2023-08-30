@@ -1,5 +1,4 @@
 import create from "zustand";
-import { persist } from 'zustand/middleware';
 import produce from "immer";
 
 
@@ -86,26 +85,51 @@ const useNearStore = create((set) => ({
                     console.log('OPEN LINK BELOW to see transaction in NEAR Explorer!');
                     console.log(`${config.explorerUrl}/transactions/${result.transaction.hash}`);
                     console.log('--------------------------------------------------------------------------------------------');
-                    persist((set)(
-                        (state) => ({
-                            ...state,
-                            nearState: {
-                                ...state.nearState,
-                                send: {
-                                    ...INITIAL_NEAR_STATE.send,
-                                    loading: false,
-                                    success: {
-                                        ok: true,
-                                        data: result.transaction,
-                                        link: `${config.explorerUrl}/transactions/${result.transaction.hash}`
-                                    },
-                                }
-                            },
-                        })
-                    ));
+                    set(
+                        produce(
+                            (state) => ({
+                                ...state,
+                                nearState: {
+                                    ...state.nearState,
+                                    send: {
+                                        ...INITIAL_NEAR_STATE.send,
+                                        loading: false,
+                                        success: {
+                                            ok: true,
+                                            data: result.transaction,
+                                            link: `${config.explorerUrl}/transactions/${result.transaction.hash}`
+                                        },
+                                    }
+                                },
+                            })
+                        )
+                    );
                 } catch (error) {
                     // return an error if unsuccessful
                     console.log(error);
+                    (set)(
+                        produce(
+                            (state) => ({
+                                ...state,
+                                nearState: {
+                                    ...state.nearState,
+                                    send: {
+                                        ...INITIAL_NEAR_STATE.send,
+                                        loading: false,
+                                        success: {
+                                            ok: false,
+                                            data: {},
+
+                                        },
+                                        failure: {
+                                            error: true,
+                                            message: error.message,
+                                        }
+                                    }
+                                },
+                            })
+                        )
+                    );
                 }
 
 
@@ -113,6 +137,29 @@ const useNearStore = create((set) => ({
         }
         catch (e) {
             console.error(e);
+            set(
+                produce(
+                    (state) => ({
+                        ...state,
+                        nearState: {
+                            ...state.nearState,
+                            send: {
+                                ...INITIAL_NEAR_STATE.send,
+                                loading: false,
+                                success: {
+                                    ok: false,
+                                    data: {},
+
+                                },
+                                failure: {
+                                    error: true,
+                                    message: e.message,
+                                }
+                            }
+                        },
+                    })
+                )
+            )
         }
     },
 
